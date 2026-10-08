@@ -1,0 +1,34 @@
+[project]
+name = "fleethub"
+version = "0.1.0"
+description = "FleetHub: model & inference runtime lifecycle hub (prototype)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+    "uv>=0.12.3",
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "uvicorn>=0.30",
+    "ruff>=0.6",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 130
+src = ["src"]
+extend-exclude = ["src/fleethub/seed/seed_data.py", "python_modules"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "B008"]

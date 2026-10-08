@@ -1,0 +1,10 @@
+.venv/
+.venv-workers/
+python_modules/
+.wrangler/
+__pycache__/
+*.local.db
+*.local.db-*
+.pytest_cache/
+.ruff_cache/
+.dev.vars

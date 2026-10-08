@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    name: Deploy to Cloudflare Workers
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with: { version: "0.12.23" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: frontend/package-lock.json }
+      - uses: actions/download-artifact@v4
+        with: { name: frontend-dist, path: frontend/dist }
+      - run: uv sync --frozen
+        working-directory: backend
+
+      - name: Resolve (or create) the D1 database and pin its id
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          id=$(npx -y wrangler@4 d1 list --json | jq -r '.[] | select(.name=="fleethub") | .uuid')
+          if [ -z "$id" ]; then
+            npx -y wrangler@4 d1 create fleethub
+            id=$(npx -y wrangler@4 d1 list --json | jq -r '.[] | select(.name=="fleethub") | .uuid')
+          fi
+          sed -i "s/00000000-0000-0000-0000-000000000000/$id/" wrangler.jsonc
+          echo "D1 database: $id"
+
+      - name: Apply D1 migrations
+        working-directory: backend
+        run: npx -y wrangler@4 d1 migrations apply fleethub --remote
+
+      - name: Deploy Worker (API + static assets)
+        id: deploy
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          uv run pywrangler deploy | tee deploy.log
+          url=$(grep -oE 'https://[a-zA-Z0-9.-]+\.workers\.dev' deploy.log | head -1)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Sync Worker secrets
+        working-directory: backend
+        env:
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+        run: |
+          set -euo pipefail
+          printf '%s' "$DEMO_PASSWORD" | npx -y wrangler@4 secret put DEMO_PASSWORD
+          printf '%s' "$SESSION_SECRET" | npx -y wrangler@4 secret put SESSION_SECRET
+
+      - name: Smoke test live deployment
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          DEMO_PASSWORD: ${{ secrets.DEMO_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$URL"
+          for i in $(seq 1 10); do curl -fsS "$URL/api/health" && break || sleep 5; done
+          curl -fsS "$URL/api/auth/status" | jq -e '.required == true'
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/api/overview"); test "$code" = "401"
+          curl -fsS -c jar -H 'content-type: application/json' -d "{\"password\":\"$DEMO_PASSWORD\"}" "$URL/api/auth/login" >/dev/null
+          curl -fsS -b jar "$URL/api/overview" | jq -e '.counts.deployments > 0'
+          curl -fsS "$URL/" | grep -q '<div id="root">'
+          echo "Deployed: $URL" >> "$GITHUB_STEP_SUMMARY"
