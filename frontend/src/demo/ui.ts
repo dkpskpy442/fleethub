@@ -51,16 +51,31 @@ function clickable(el: HTMLElement): HTMLElement {
   return el.querySelector<HTMLElement>("a, button") ?? (el.closest("a, button") as HTMLElement | null) ?? el;
 }
 
+/** Smoothly bring an element into view (only if needed) and wait until scrolling stops. */
+async function scrollIntoViewSettled(el: HTMLElement) {
+  const r = el.getBoundingClientRect();
+  if (r.top >= 80 && r.bottom <= window.innerHeight - 40) return;
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  let lastY = -1;
+  let still = 0;
+  for (let i = 0; i < 40 && still < 3; i++) {
+    await sleep(50);
+    still = Math.abs(window.scrollY - lastY) < 1 ? still + 1 : 0;
+    lastY = window.scrollY;
+  }
+}
+
 /** Spotlight an element for a moment, then click it. */
 export async function click(spec: string, { pause = 900, root }: { pause?: number; root?: () => ParentNode | null } = {}) {
   let el = clickable(await waitFor(spec, { root }));
-  // Permissions reload after a persona switch: give a disabled button a moment to enable.
-  for (let i = 0; i < 40 && (el as HTMLButtonElement).disabled; i++) {
+  // Permissions reload after a persona switch: give a disabled button a moment (max ~8s) to enable.
+  const until = Date.now() + 8000;
+  while ((el as HTMLButtonElement).disabled && Date.now() < until) {
     await sleep(250);
-    el = clickable(await waitFor(spec, { root }));
+    el = clickable(await waitFor(spec, { root, timeout: 2000 }));
   }
   if ((el as HTMLButtonElement).disabled) throw new Error(`“${spec.replace(/^css:/, "")}” is disabled for the current persona.`);
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
+  await scrollIntoViewSettled(el);
   el.classList.add("tour-press");
   await sleep(pause);
   el.classList.remove("tour-press");
@@ -79,9 +94,8 @@ export async function fillAll(selector: string, value: string) {
   const els = Array.from(document.querySelectorAll<HTMLTextAreaElement | HTMLInputElement>(selector));
   for (const el of els) {
     if (el.value.trim()) continue;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-    setValue(el, value);
-    await sleep(120);
+    setValue(el, value); // no scrolling: fields fill in place
+    await sleep(80);
   }
   return els.length;
 }
@@ -96,11 +110,13 @@ export async function confirmDialog(text?: string) {
   if (!d) throw new Error("The confirmation dialog didn't open.");
   const field = d.querySelector<HTMLTextAreaElement | HTMLInputElement>("textarea, input[type=text]");
   if (field && text) {
-    await sleep(500);
+    await sleep(400);
     setValue(field, text);
+    await sleep(500);
+  } else {
+    await sleep(250);
   }
-  await sleep(700);
-  await click("Confirm", { root: dialog, pause: 600 });
+  await click("Confirm", { root: dialog, pause: 400 });
   const gone = Date.now() + 8000;
   while (dialog() && Date.now() < gone) await sleep(150);
   if (dialog()) throw new Error("The action was rejected — see the message on screen.");

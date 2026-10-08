@@ -11,6 +11,8 @@ export interface TourVars {
 export interface ActionCtx {
   vars: TourVars;
   setVars: (v: Partial<TourVars>) => void;
+  /** Narrate progress in the panel while a longer action runs. */
+  say: (msg: string) => void;
 }
 
 export interface Step {
@@ -34,6 +36,8 @@ export interface Step {
     hint: string;
     /** Whether the user may do it by hand and tell the tour ("I did it"). Default true. */
     selfServe?: boolean;
+    /** The action moves the UI on to the next step's screen, so the tour advances with it. */
+    advances?: boolean;
     run: (ctx: ActionCtx) => Promise<void>;
   };
 }
@@ -80,11 +84,14 @@ const currentRolloutId = () => location.pathname.match(/^\/rollouts\/(ro_[^/]+)/
 
 /** Click every enabled button with this exact label (e.g. per-target "Retry"), confirming each dialog.
  *  Waits for at least one to become enabled (permissions reload after a persona switch). */
-async function clickEach(label: string, text?: string) {
+async function clickEach(label: string, text?: string, onEach?: (n: number, total: number) => void) {
   const find = () => Array.from(document.querySelectorAll<HTMLButtonElement>("main button"))
     .find((b) => b.textContent?.trim() === label && !b.disabled);
   const deadline = Date.now() + 10_000;
   let clicked = 0;
+  const count = () => Array.from(document.querySelectorAll<HTMLButtonElement>("main button"))
+    .filter((b) => b.textContent?.trim() === label && !b.disabled).length;
+  let total = 0;
   while (clicked < 8) {
     const btn = find();
     if (!btn) {
@@ -92,12 +99,14 @@ async function clickEach(label: string, text?: string) {
       await sleep(250);
       continue;
     }
+    total = Math.max(total, clicked + count());
+    onEach?.(clicked + 1, total);
     btn.setAttribute("data-tour-now", "1");
-    await click("css:[data-tour-now='1']");
+    await click("css:[data-tour-now='1']", { pause: clicked ? 500 : 800 });
     btn.removeAttribute("data-tour-now");
     await confirmDialog(text);
     clicked++;
-    await sleep(1200);
+    await sleep(500);
   }
   if (!clicked) throw new Error(`No enabled “${label}” button on this page.`);
 }
@@ -176,10 +185,10 @@ export const STEPS: Step[] = [
     persona: "u_jordan",
     route: "/",
     highlight: VULN,
-    highlightDone: "css:main h1",
     narration: "Jordan, a platform engineer, starts where anyone would: the top item in Needs attention, a critical CVE running on production deployments, some of which can't even be verified.",
     body: <p>You're <b>Jordan</b>, a platform engineer. The top item in <b>Needs attention</b> is a <b>critical CVE</b> running on production deployments, and a few of them can't even be verified because their inventory data is stale.</p>,
     action: {
+      advances: true,
       button: "Open the finding",
       hint: "Click the SIM-2026-0142 item.",
       run: async ({ setVars }) => {
@@ -209,19 +218,21 @@ export const STEPS: Step[] = [
     persona: "u_jordan",
     route: async (v) => `/vulnerabilities/${await vulnId(v)}`,
     highlight: "Remediation options",
-    highlightDone: "Targets & guardrails",
     narration: "Every engine version without this vulnerability is guardrail-checked against every exposed deployment. vLLM 0.10.0 ranks first: most pass, some need a written justification, and one is blocked as incompatible.",
     body: <>
       <p>Every engine version without the vulnerability is <b>guardrail-checked against every exposed deployment</b>.</p>
       <p><b>vLLM 0.10.0</b> ranks first: most deployments pass, some need a written justification, and Sentinel Guard on L4 is <b>blocked</b> (recorded as incompatible). vLLM 0.9.2 ranks last because it carries its own high CVE.</p>
     </>,
     action: {
+      advances: true,
       button: "Plan with vLLM 0.10.0",
       hint: "Click “Plan remediation rollout” on vLLM 0.10.0.",
-      run: async () => {
+      run: async ({ say }) => {
+        say("Opening the rollout planner for vLLM 0.10.0…");
         await click("Plan remediation rollout");
         await waitFor("Next: Targets");
-        await sleep(1500);
+        say("The change is prefilled from the finding. Checking every target…");
+        await sleep(900);
         await click("Next: Targets");
         await waitFor("Targets & guardrails");
       },
@@ -240,10 +251,12 @@ export const STEPS: Step[] = [
       <p><b>Warnings</b> (untested on MI300X, known issues on A100, a deprecated model, stale inventory) can only be accepted with a written justification, which goes in the audit log.</p>
     </>,
     action: {
+      advances: true,
       button: "Justify & continue",
       hint: "Write a justification for each warned deployment, then click “Next: Impact review”.",
-      run: async () => {
+      run: async ({ say }) => {
         await wizardTo("Next: Impact review");
+        say("Writing a justification for each warned deployment…");
         await fillAll(JUSTIFY, JUSTIFICATION);
         await sleep(600);
         await click("Next: Impact review");
@@ -258,10 +271,10 @@ export const STEPS: Step[] = [
     persona: "u_jordan",
     route: wizardUrl,
     highlight: "Vulnerabilities resolved",
-    highlightDone: "Waves run top to bottom",
     narration: "Before anything changes: how many deployments and replicas, how many in production, which regions, and confirmation that the change actually resolves this CVE everywhere it's applied.",
     body: <p>Before anything changes: how many deployments and replicas, how many in prod, which regions, and confirmation that the change actually <b>resolves the CVE</b> everywhere it's applied.</p>,
     action: {
+      advances: true,
       button: "Continue to waves",
       hint: "Click “Next: Waves”.",
       run: async () => {
@@ -278,20 +291,21 @@ export const STEPS: Step[] = [
     persona: "u_jordan",
     route: wizardUrl,
     highlight: "Waves run top to bottom",
-    highlightDone: "css:main h1",
     narration: "FleetHub proposes waves: non-prod first, then a single production canary, then production region by region. A target only counts once inventory confirms the new version and it stays healthy through the bake time. Any failure pauses everything.",
     body: <>
       <p>Suggested waves: <b>non-prod → one prod canary → prod region by region</b>, all editable.</p>
       <p>A target only counts as done when <b>inventory confirms</b> the new image and it stays healthy through the wave's bake time. Any failure pauses the whole rollout.</p>
     </>,
     action: {
+      advances: true,
       button: "Review & submit",
       hint: "Click “Next: Submit”, then “Submit for execution”.",
-      run: async ({ setVars }) => {
+      run: async ({ setVars, say }) => {
         await wizardTo("Next: Submit");
         await click("Next: Submit");
         await waitFor("Submit for execution");
-        await sleep(1200);
+        say("Submitting for execution…");
+        await sleep(1000);
         await click("Submit for execution");
         await waitFor("Approve prod waves", { timeout: 15_000 });
         const id = currentRolloutId();
@@ -331,7 +345,7 @@ export const STEPS: Step[] = [
     highlightDone: "Wave 1",
     narration: "Time is simulated. Over the next hour the deployer applies non-production, inventory confirms the new image digest, and each target bakes healthy. Production waves wait for approval.",
     body: <p>Time is simulated. Over the next hour the deployer applies non-prod, inventory <b>confirms the new image digest</b>, and each target bakes healthy. Prod waves wait for approval.</p>,
-    action: { button: "Let an hour pass", hint: "Press +30m twice in the header.", run: async () => { await advance(60); await sleep(1500); } },
+    action: { button: "Let an hour pass", hint: "Press +30m twice in the header.", run: async ({ say }) => { say("An hour passes on the simulated clock…"); await advance(60); await sleep(1500); } },
   },
   {
     id: "approve",
@@ -365,7 +379,7 @@ export const STEPS: Step[] = [
       <p>Back as Jordan. The canary and US regions roll out and verify.</p>
       <p>In <b>eu-west</b> the deployer reports success, but that region's inventory exporter is down, so there's <b>no evidence</b>. A claim without evidence never counts: those targets fail and the rollout <b>pauses itself</b>.</p>
     </>,
-    action: { button: "Let 4 hours pass", hint: "Press +2h twice in the header.", run: async () => { await advance(240); await sleep(1500); } },
+    action: { button: "Let 4 hours pass", hint: "Press +2h twice in the header.", run: async ({ say }) => { say("Four hours pass while prod waves roll out…"); await advance(240); await sleep(1500); } },
   },
   {
     id: "recover",
@@ -383,11 +397,14 @@ export const STEPS: Step[] = [
     action: {
       button: "Restore, retry & resume",
       hint: "Bring the eu-west exporter online (Simulator), click Retry on each failed target, then Resume.",
-      run: async () => {
+      run: async ({ say }) => {
+        say("Restoring the eu-west inventory exporter…");
         await post("/sim/source", { source_id: "src_inv_euw", offline: false });
-        await clickEach("Retry");
+        await clickEach("Retry", undefined, (n, total) => say(`Retrying failed target ${n} of ${total}…`));
+        say("Resuming the rollout…");
         await click("Resume");
         await confirmDialog();
+        say("Two hours pass while the remaining waves run…");
         await advance(120);
         await sleep(1500);
       },
@@ -406,8 +423,10 @@ export const STEPS: Step[] = [
     action: {
       button: "Verify & resume",
       hint: "As Alex: click “Manually verify”, give a justification, Confirm, then Resume.",
-      run: async () => {
+      run: async ({ say }) => {
+        say("Recording the manual verification with a justification…");
         await clickEach("Manually verify", "Checked the bare-metal pool by hand: vLLM 0.10.0 ROCm image running and healthy.");
+        say("Resuming the rollout…");
         await click("Resume");
         await confirmDialog();
         await sleep(1500);

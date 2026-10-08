@@ -112,6 +112,7 @@ function TourPanel({ state, update }: { state: TourState; update: (fn: (s: TourS
   const [collapsed, setCollapsed] = useState(false);
   const [spotKey, setSpotKey] = useState(0);
   const [entering, setEntering] = useState(true);
+  const [status, setStatus] = useState<string | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
   const enteringRef = useRef(entering);
@@ -175,10 +176,18 @@ function TourPanel({ state, update }: { state: TourState; update: (fn: (s: TourS
     setError(null);
     try {
       const vars = { ...stateRef.current.vars };
-      await step.action.run({ vars, setVars: (v) => Object.assign(vars, v) });
-      update((s) => ({ ...s, vars, done: { ...s.done, [step.id]: true } }));
-      await qc.invalidateQueries();
-      setSpotKey((k) => k + 1);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      await Promise.race([
+        step.action.run({ vars, setVars: (v) => Object.assign(vars, v), say: setStatus }),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("This step took too long. Check the page, then try again or use “I did it”.")), 60_000); }),
+      ]).finally(() => clearTimeout(timer));
+      const advance = !!step.action.advances && stateRef.current.index < STEPS.length - 1;
+      // Transition actions land on the next step's screen: move the narration with them.
+      update((s) => ({ ...s, vars, done: { ...s.done, [step.id]: true }, index: advance ? s.index + 1 : s.index }));
+      if (!advance) {
+        await qc.invalidateQueries();
+        setSpotKey((k) => k + 1);
+      }
       return true;
     } catch (e) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
@@ -186,6 +195,7 @@ function TourPanel({ state, update }: { state: TourState; update: (fn: (s: TourS
       return false;
     } finally {
       setBusy(false);
+      setStatus(null);
     }
   }, [step, update, qc]);
 
@@ -209,7 +219,7 @@ function TourPanel({ state, update }: { state: TourState; update: (fn: (s: TourS
       if (cancelled) return;
       const hadAction = !!step.action && !stateRef.current.done[step.id];
       if (hadAction && !(await runAction())) return;
-      if (cancelled) return;
+      if (cancelled || (hadAction && step.action?.advances)) return; // already moved on
       if (stateRef.current.index >= STEPS.length - 1) {
         setAutoplay(false);
         return;
@@ -278,11 +288,15 @@ function TourPanel({ state, update }: { state: TourState; update: (fn: (s: TourS
             )}
           </div>
           <div className="space-y-2 text-sm leading-relaxed text-slate-700">{step.body}</div>
-          {step.action && (
+          {step.action && (busy ? (
+            <div className="flex items-center gap-2 rounded-md bg-indigo-50 px-2.5 py-1.5 text-xs text-indigo-900" aria-live="polite">
+              <Loader2 className="size-3.5 shrink-0 animate-spin" /> {status ?? `${step.action.button}…`}
+            </div>
+          ) : (
             <div className={cx("rounded-md px-2.5 py-1.5 text-xs", isDone ? "bg-emerald-50 text-emerald-800" : "bg-indigo-50 text-indigo-900")}>
               {isDone ? <>✓ {step.action.button}</> : <>Try it yourself: {step.action.hint}</>}
             </div>
-          )}
+          ))}
           {error && <div className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-800">{error}</div>}
         </div>
       )}

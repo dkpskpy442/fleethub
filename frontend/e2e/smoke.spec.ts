@@ -115,18 +115,14 @@ test("guided demo plays end to end from the UI", async ({ page, request }) => {
   const panel = page.getByTestId("tour-panel");
   await expect(panel.getByRole("heading", { name: "The Overview" })).toBeVisible({ timeout: 30_000 });
 
+  // Drive it like a person: press whichever button the panel offers (an action, or Next).
+  const ready = panel.locator("[data-testid=tour-do]:not([disabled]), [data-testid=tour-next]:not([disabled])");
   for (let i = 0; i < 40; i++) {
-    const doIt = panel.getByTestId("tour-do");
-    if (await doIt.isVisible()) {
-      await doIt.click();
-      await expect(panel.getByTestId("tour-next")).toBeVisible({ timeout: 90_000 });
-    }
+    await expect(ready).toHaveCount(1, { timeout: 90_000 });
     await expect(panel.locator(".border-red-200")).toHaveCount(0);
-    const next = panel.getByTestId("tour-next");
-    await expect(next).toBeEnabled();
-    const finish = (await next.textContent())?.includes("Finish");
-    await next.click();
-    if (finish) break;
+    const label = (await ready.textContent()) ?? "";
+    await ready.click();
+    if (label.includes("Finish")) break;
   }
   await expect(panel).toBeHidden();
 

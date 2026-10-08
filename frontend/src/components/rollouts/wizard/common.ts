@@ -32,6 +32,8 @@ export function usePreview(c: Change, deploymentIds: string[] | null, enabled: b
     queryFn: () => api<RolloutPreview>("/rollouts/preview", { method: "POST", body: { ...changeBody(c), deployment_ids: ids ?? undefined } }),
     enabled: enabled && changeValid(c) && (ids === null || ids.length > 0),
     staleTime: 15_000,
+    // Guardrail outcomes depend on live fleet state: never start a new wizard session from a cached preview.
+    gcTime: 0,
   });
 }
 

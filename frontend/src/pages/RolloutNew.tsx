@@ -49,13 +49,14 @@ export function RolloutNewPage() {
   const candidates = usePreview(change, scopeAll ? null : urlIds, step >= 1);
   const [selectionFor, setSelectionFor] = useState<string | null>(null);
   useEffect(() => {
-    if (!candidates.data || selectionFor === changeKey) return;
+    // Only preselect from fresh results (never from data that is being refreshed).
+    if (!candidates.data || candidates.isFetching || selectionFor === changeKey) return;
     const eligible = candidates.data.targets
       .filter((t) => t.guardrails.outcome === "ok" || t.guardrails.outcome === "warn")
       .map((t) => t.deployment.id);
     setSelected(new Set(urlIds.length ? eligible.filter((id) => urlIds.includes(id)) : eligible));
     setSelectionFor(changeKey);
-  }, [candidates.data, changeKey, selectionFor, urlIds]);
+  }, [candidates.data, candidates.isFetching, changeKey, selectionFor, urlIds]);
 
   // Remember every row we've seen so labels survive scope changes.
   const [seen, setSeen] = useState<Map<string, PreviewTarget>>(new Map());
@@ -115,10 +116,17 @@ export function RolloutNewPage() {
   ];
   const firstInvalid = canNext.findIndex((ok) => !ok);
   const reachable = Math.min(visited, firstInvalid === -1 ? STEPS.length - 1 : firstInvalid);
+  // Glide back to the top first, then turn the page (avoids a jump when the next screen is shorter).
   const go = (i: number) => {
-    setStep(i);
-    setVisited((v) => Math.max(v, i));
-    window.scrollTo({ top: 0 });
+    const turn = () => {
+      setStep(i);
+      setVisited((v) => Math.max(v, i));
+    };
+    if (window.scrollY < 120) return turn();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    const started = performance.now();
+    const wait = () => (window.scrollY < 40 || performance.now() - started > 700 ? turn() : requestAnimationFrame(wait));
+    requestAnimationFrame(wait);
   };
 
   // ---- submit
