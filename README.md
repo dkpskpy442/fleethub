@@ -20,9 +20,17 @@ lifecycle and across an infrastructure fleet. It answers:
 > All data is synthetic. Deployment systems, inventory exporters and the vulnerability scanner are
 > **simulated** behind real adapter interfaces — nothing is deployed anywhere.
 
+**Fastest way to see it:** open the app and click **Guided demo** in the header. It resets the demo
+data and walks through a critical-CVE remediation end to end, step by step or on autoplay.
+
 Start with **[docs/architecture.md](docs/architecture.md)** (data model and the
 desired → observed reconciliation lifecycle) and **[docs/demo-script.md](docs/demo-script.md)**
 (a 15-minute walkthrough of the user stories).
+Proposed changes for going beyond a prototype:
+**[docs/future-gitops-governance.md](docs/future-gitops-governance.md)** (FleetHub as a governance
+layer over GitOps) and **[docs/future-compatibility-evidence.md](docs/future-compatibility-evidence.md)**
+(compatibility evidence bound to immutable identities, with per-dimension claims instead of one
+"certified" status).
 
 ## Stack
 
@@ -52,9 +60,10 @@ backend/
   wrangler.jsonc                  Worker config (D1 binding, static assets)
 frontend/
   src/pages/                      one file per page
+  src/demo/                       guided demo: tour engine + scripted steps
   src/components/                 ui primitives, status badges (one per status family), domain widgets
   e2e/                            Playwright smoke tests against the Workers runtime
-docs/                             architecture + demo script
+docs/                             architecture, demo script, future improvements
 .github/workflows/                ci.yml (PR checks), deploy.yml (main → Cloudflare)
 ```
 

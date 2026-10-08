@@ -1,5 +1,15 @@
 # FleetHub demo script (~15 minutes)
 
+> **Prefer the in-app guided demo.** Click **Guided demo** in the header (or **Start guided demo** on
+> the Overview). It resets the data, gives a three-step quick tour (Overview, a model version, an
+> engine version), then plays one continuous story: remediating the critical CVE flagged in **Needs
+> attention**. The tour operates the real UI (it clicks the attention item, the remediation button,
+> each wizard step, Start, Approve, Retry…), switches persona at the hand-offs, and spotlights what to
+> look at. Use the contextual button to perform each action, **I did it** if you did it by hand, or
+> **Autoplay** for a hands-free run. Defined in `frontend/src/demo/steps.tsx`; nothing is mocked.
+
+The script below is the same story for presenting manually.
+
 Everything below runs on synthetic data and simulated infrastructure. Start from a clean seed
 (**Simulator → Reset demo data** as *Alex Morgan — admin*). The sim clock starts at
 `2026-10-08 09:00Z`. Switch personas with the **Acting as** menu in the header; time moves only when

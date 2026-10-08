@@ -1,7 +1,8 @@
-import { ArrowRight, Boxes, Cpu, GitPullRequestArrow, Network, ShieldAlert } from "lucide-react";
+import { ArrowRight, Boxes, Cpu, GitPullRequestArrow, Network, ShieldAlert, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { ApprovalBadge, FreshnessBadge, RolloutBadge, SeverityBadge } from "../components/status";
-import { Card, Empty, ErrorBox, PageHeader, Spinner, Stat, cx } from "../components/ui";
+import { Button, Card, Empty, ErrorBox, PageHeader, Spinner, Stat, cx } from "../components/ui";
+import { useTour } from "../demo/tour";
 import { useApi } from "../lib/api";
 import { fmtAgo, fmtDuration } from "../lib/format";
 import type { AttentionItem, Overview } from "../lib/types";
@@ -13,6 +14,7 @@ const CATEGORY_LABEL: Record<string, string> = {
 
 export function OverviewPage() {
   const { data, error, isLoading } = useApi<Overview>("/overview", { refetchInterval: 5000 });
+  const tour = useTour();
   if (isLoading) return <Spinner />;
   if (error || !data) return <ErrorBox error={error} />;
   const c = data.counts;
@@ -24,6 +26,16 @@ export function OverviewPage() {
         title="Overview"
         subtitle="What do we run, where, is it what we intended, and what needs attention?"
       />
+      {!tour.active && (
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3">
+          <Sparkles className="size-5 text-indigo-600" />
+          <div className="min-w-0 flex-1 text-sm text-indigo-900">
+            <span className="font-medium">New here?</span> Take the guided demo: remediate a critical CVE across the fleet end to end,
+            step by step or on autoplay. It resets the demo data first.
+          </div>
+          <Button variant="primary" size="sm" onClick={tour.start}>Start guided demo</Button>
+        </div>
+      )}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-6">
         <Stat label="Deployments" value={c.deployments} hint={`${c.managed} managed · ${c.deployments - c.managed} unmanaged`} />
         <Stat label="Converged" value={attention.converged ?? 0} tone="green" hint="verified by fresh inventory" />

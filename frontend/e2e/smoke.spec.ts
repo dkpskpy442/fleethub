@@ -106,3 +106,32 @@ test("deployment page shows the reconciliation chain for a phantom success", asy
   await expect(page.getByText("success not observed").first()).toBeVisible();
   await expect(page.getByText(/Desired state locked by rollout/)).toBeVisible();
 });
+
+test("guided demo plays end to end from the UI", async ({ page, request }) => {
+  test.setTimeout(300_000);
+  await as(page, "u_jordan");
+  await page.goto("/");
+  await page.getByTestId("start-demo").click();
+  const panel = page.getByTestId("tour-panel");
+  await expect(panel.getByRole("heading", { name: "The Overview" })).toBeVisible({ timeout: 30_000 });
+
+  for (let i = 0; i < 40; i++) {
+    const doIt = panel.getByTestId("tour-do");
+    if (await doIt.isVisible()) {
+      await doIt.click();
+      await expect(panel.getByTestId("tour-next")).toBeVisible({ timeout: 90_000 });
+    }
+    await expect(panel.locator(".border-red-200")).toHaveCount(0);
+    const next = panel.getByTestId("tour-next");
+    await expect(next).toBeEnabled();
+    const finish = (await next.textContent())?.includes("Finish");
+    await next.click();
+    if (finish) break;
+  }
+  await expect(panel).toBeHidden();
+
+  const rollouts = await api(request, "u_jordan", "GET", "/rollouts");
+  const remediation = rollouts.find((r: { title: string }) => r.title.startsWith("Remediate SIM-2026-0142"));
+  expect(remediation.status).toBe("completed");
+  expect(remediation.target_counts.succeeded).toBeGreaterThan(20);
+});

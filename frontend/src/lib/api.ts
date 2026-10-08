@@ -12,12 +12,15 @@ export function getPersona(): string {
   }
 }
 
+export const PERSONA_EVENT = "fleethub:persona";
+
 export function setPersona(id: string) {
   try {
     localStorage.setItem(PERSONA_KEY, id);
   } catch {
     /* storage unavailable: persona falls back to default */
   }
+  window.dispatchEvent(new CustomEvent(PERSONA_EVENT, { detail: id }));
 }
 
 export class ApiError extends Error {
@@ -26,10 +29,10 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, init: { method?: string; body?: unknown; persona?: string } = {}): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method: init.method ?? "GET",
-    headers: { "content-type": "application/json", "x-persona": getPersona() },
+    headers: { "content-type": "application/json", "x-persona": init.persona ?? getPersona() },
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
     credentials: "same-origin",
   });

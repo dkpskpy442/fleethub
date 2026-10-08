@@ -1,13 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Activity, Boxes, Cpu, FastForward, FlaskConical, GitPullRequestArrow, LayoutDashboard, Network, Pause, Play, RefreshCw,
-  ScrollText, ShieldAlert, Table2, UserRound,
+  ScrollText, ShieldAlert, Sparkles, Table2, UserRound,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { api, getPersona, setPersona, useAction, useApi } from "../lib/api";
+import { api, getPersona, PERSONA_EVENT, setPersona, useAction, useApi } from "../lib/api";
 import { fmtTime } from "../lib/format";
 import type { Me, Meta } from "../lib/types";
+import { useTour } from "../demo/tour";
 import { useMe } from "./domain";
 import { cx } from "./ui";
 
@@ -57,13 +58,27 @@ export function Layout() {
         <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-slate-200 bg-white/90 px-4 py-2 backdrop-blur md:px-6">
           <MobileNav />
           <SimClock />
-          <div className="ml-auto"><PersonaSwitcher /></div>
+          <div className="ml-auto flex items-center gap-3"><DemoButton /><PersonaSwitcher /></div>
         </header>
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 py-6 md:px-6">
           <Outlet />
         </main>
       </div>
     </div>
+  );
+}
+
+function DemoButton() {
+  const tour = useTour();
+  if (tour.active) return null;
+  return (
+    <button
+      onClick={tour.start}
+      data-testid="start-demo"
+      className="inline-flex h-7 items-center gap-1.5 rounded-md bg-indigo-600 px-2.5 text-xs font-medium text-white hover:bg-indigo-700"
+    >
+      <Sparkles className="size-3.5" /> Guided demo
+    </button>
   );
 }
 
@@ -84,6 +99,11 @@ function PersonaSwitcher() {
   const { data } = useMe();
   const qc = useQueryClient();
   const [cur, setCur] = useState(getPersona());
+  useEffect(() => {
+    const h = (e: Event) => setCur((e as CustomEvent<string>).detail);
+    window.addEventListener(PERSONA_EVENT, h);
+    return () => window.removeEventListener(PERSONA_EVENT, h);
+  }, []);
   if (!data) return null;
   return (
     <label className="flex items-center gap-2 text-sm" title={data.user.role_description}>
@@ -94,7 +114,6 @@ function PersonaSwitcher() {
         value={cur}
         onChange={(e) => {
           setPersona(e.target.value);
-          setCur(e.target.value);
           qc.invalidateQueries();
         }}
         className="rounded-md border border-slate-300 bg-white py-1 pl-2 pr-7 text-sm"

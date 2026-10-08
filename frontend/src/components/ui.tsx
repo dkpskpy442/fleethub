@@ -17,7 +17,7 @@ export function Button({
       {...rest}
       disabled={rest.disabled || loading}
       className={cx(
-        "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50",
         size === "sm" ? "h-7 px-2.5 text-xs" : "h-9 px-3.5 text-sm",
         variant === "primary" && "bg-indigo-600 text-white hover:bg-indigo-700",
         variant === "secondary" && "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
@@ -193,7 +193,7 @@ export function KV({ items }: { items: [ReactNode, ReactNode][] }) {
 
 export function Stat({ label, value, tone, hint }: { label: string; value: ReactNode; tone?: "red" | "amber" | "green" | "gray"; hint?: ReactNode }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div data-tour={label} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</div>
       <div className={cx("mt-1 text-2xl font-semibold tabular-nums",
         tone === "red" && "text-red-600", tone === "amber" && "text-amber-600", tone === "green" && "text-emerald-600", tone === "gray" && "text-slate-500")}>

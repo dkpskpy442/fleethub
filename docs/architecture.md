@@ -263,3 +263,16 @@ Enforced in `domain/rbac.py` on every mutation; the UI only mirrors it.
 * Auth is a shared demo password plus a persona switcher — not real identity.
 * Python Workers have tighter CPU budgets than a container; long `advance` calls are capped at 12h
   per request.
+
+## 8. Beyond the prototype
+
+Two proposed changes if FleetHub moves toward production:
+
+* **[Governance over GitOps](future-gitops-governance.md):** FleetHub stops being the authoritative
+  source of desired state. Git owns desired config, Argo CD / Flux apply it, and FleetHub governs
+  changes (PR checks, guardrails, staged promotion) and verifies them against inventory.
+* **[Compatibility evidence bound to immutable identity](future-compatibility-evidence.md):**
+  compatibility moves from version labels to content-addressed identities (model artifact digest,
+  image digest, serving config hash, platform profile), and the single "certified" status becomes
+  per-dimension claims (functional, numerical, quality, performance, stability, safety) evaluated
+  against a deployment's requirement policy.

@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ToastProvider } from "./components/toast";
+import { TourProvider } from "./demo/tour";
 import "./index.css";
 import { queryClient } from "./lib/api";
 
@@ -12,7 +13,9 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <BrowserRouter>
-          <App />
+          <TourProvider>
+            <App />
+          </TourProvider>
         </BrowserRouter>
       </ToastProvider>
     </QueryClientProvider>
