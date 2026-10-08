@@ -266,8 +266,15 @@ Enforced in `domain/rbac.py` on every mutation; the UI only mirrors it.
 
 ## 8. Beyond the prototype
 
-Two proposed changes if FleetHub moves toward production:
+Proposed changes if FleetHub moves toward production:
 
+* **[Phased integration with live systems](future-live-integration.md):** replace simulated adapters
+  in phases, read-only first and non-prod before prod, prioritizing operational health. FleetHub must
+  prove it sees the fleet correctly and that its own dependencies are healthy before it changes
+  anything; a preflight check blocks rollouts while any dependency is unhealthy or unknown.
+* **[Metric-based rollout gates](future-metric-gates.md):** gates check that serving metrics stay
+  within acceptable ranges (TTFT, TBT/ITL, TTLT, error rate, throughput, output health) against SLOs
+  and a concurrent baseline, not just that the new version is healthy.
 * **[Governance over GitOps](future-gitops-governance.md):** FleetHub stops being the authoritative
   source of desired state. Git owns desired config, Argo CD / Flux apply it, and FleetHub governs
   changes (PR checks, guardrails, staged promotion) and verifies them against inventory.

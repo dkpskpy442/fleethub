@@ -27,10 +27,15 @@ Start with **[docs/architecture.md](docs/architecture.md)** (data model and the
 desired → observed reconciliation lifecycle) and **[docs/demo-script.md](docs/demo-script.md)**
 (a 15-minute walkthrough of the user stories).
 Proposed changes for going beyond a prototype:
-**[docs/future-gitops-governance.md](docs/future-gitops-governance.md)** (FleetHub as a governance
-layer over GitOps) and **[docs/future-compatibility-evidence.md](docs/future-compatibility-evidence.md)**
-(compatibility evidence bound to immutable identities, with per-dimension claims instead of one
-"certified" status).
+
+* **[docs/future-live-integration.md](docs/future-live-integration.md):** a phased plan for replacing
+  simulated systems with live ones, operational health first, read-only before any live changes.
+* **[docs/future-metric-gates.md](docs/future-metric-gates.md):** rollout gates on serving metrics
+  (TTFT, TBT, TTLT and more), not just deployment health.
+* **[docs/future-gitops-governance.md](docs/future-gitops-governance.md):** FleetHub as a governance
+  layer over GitOps.
+* **[docs/future-compatibility-evidence.md](docs/future-compatibility-evidence.md):** compatibility
+  evidence bound to immutable identities, with per-dimension claims instead of one "certified" status.
 
 ## Stack
 
