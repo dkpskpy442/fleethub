@@ -11,7 +11,7 @@
 The script below is the same story for presenting manually.
 
 Everything below runs on synthetic data and simulated infrastructure. Start from a clean seed
-(**Simulator → Reset demo data** as *Alex Morgan — admin*). The sim clock starts at
+(**Reset** in the header, available to every persona). The sim clock starts at
 `2026-10-08 09:00Z`. Switch personas with the **Acting as** menu in the header; time moves only when
 you press **+5m / +30m / +2h** or **Play**.
 

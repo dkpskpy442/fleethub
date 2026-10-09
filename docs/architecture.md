@@ -251,7 +251,10 @@ deprecated) auto-pauses the rollout until the target is skipped or the warning i
 | platform_engineer | engines/images/lifecycle, compatibility, adopt/reconcile/accept drift, create/submit/execute/pause/resume/retry/skip/rollback rollouts |
 | security_engineer | triage findings incl. risk acceptance with expiry, draft remediation rollouts (cannot submit) |
 | release_approver | approve/reject rollouts that touch prod (never their own) |
-| admin | everything, plus manual verification and demo reset |
+| admin | everything, plus manual verification |
+
+Simulation controls (advancing the clock, injecting faults, resetting the demo data) are demo
+infrastructure rather than governed actions, so every persona may use them.
 
 Enforced in `domain/rbac.py` on every mutation; the UI only mirrors it.
 

@@ -1,6 +1,7 @@
-import { CloudOff, Cloud, Radio, RotateCcw, Wrench, Zap } from "lucide-react";
+import { CloudOff, Cloud, Radio, Wrench, Zap } from "lucide-react";
 import { useState } from "react";
-import { useCan, useMe } from "../components/domain";
+import { useMe } from "../components/domain";
+import { ResetDemoButton } from "../components/ResetDemo";
 import { FreshnessBadge, Pill, SeverityBadge } from "../components/status";
 import { Button, Card, Empty, ErrorBox, Field, Input, Modal, Mono, PageHeader, Select, Spinner, Table, Td, Th } from "../components/ui";
 import { useAction, useApi } from "../lib/api";
@@ -26,7 +27,6 @@ export function SimulatorPage() {
   const { data, error, isLoading } = useApi<SimView>("/sim", { refetchInterval: 3000 });
   const { data: fleet } = useApi<DeploymentRow[]>("/fleet");
   const { data: me } = useMe();
-  const canReset = useCan("sim.reset");
   const act = useAction("POST", { success: "Simulated event applied" });
   const del = useAction("DELETE", { success: "Fault cleared" });
   const [faultTarget, setFaultTarget] = useState("");
@@ -45,11 +45,7 @@ export function SimulatorPage() {
       <PageHeader
         title="Simulator"
         subtitle={<>The "outside world" FleetHub integrates with: a deployment system, inventory exporters and an image scanner — all simulated. Events here are things that happen <em>to</em> FleetHub, not actions taken in it.</>}
-        actions={canReset && (
-          <Button variant="danger" onClick={() => confirm("Reset all demo data to the initial seed?") && act.mutate({ path: "/sim/reset" })}>
-            <RotateCcw className="size-4" /> Reset demo data
-          </Button>
-        )}
+        actions={<ResetDemoButton />}
       />
       <div className="grid gap-5 lg:grid-cols-2">
         <Card title="Simulated clock" subtitle="Workers have no background jobs: time advances only when you advance it or press Play (the browser drives ticks).">

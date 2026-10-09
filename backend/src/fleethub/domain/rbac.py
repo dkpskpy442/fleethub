@@ -32,7 +32,8 @@ PERMISSIONS: dict[str, set[str]] = {
     "rollout.manual_verify": {"admin"},
     "finding.triage": {"security_engineer", "admin"},
     "sim.control": {"viewer", "model_owner", "platform_engineer", "security_engineer", "release_approver", "admin"},
-    "sim.reset": {"admin"},
+    # Demo infrastructure, not governed data: any persona may reset the shared demo world.
+    "sim.reset": {"viewer", "model_owner", "platform_engineer", "security_engineer", "release_approver", "admin"},
 }
 
 # Permissions scoped to the actor's own team for model owners.
@@ -44,7 +45,7 @@ DESCRIPTIONS = {
     "platform_engineer": "Manages engines, compatibility, adopts/reconciles deployments, plans and executes rollouts.",
     "security_engineer": "Triages vulnerability findings, accepts risk, drafts remediation rollouts.",
     "release_approver": "Approves or rejects rollouts that touch production (never their own).",
-    "admin": "Everything, plus manual verification overrides and demo reset.",
+    "admin": "Everything, plus manual verification overrides.",
 }
 
 
