@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Loader2, X } from "lucide-react";
 import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type { ApiError } from "../lib/api";
 
 export function cx(...a: Parameters<typeof clsx>) {
@@ -110,7 +111,9 @@ export function Modal({ open, onClose, title, children, footer, wide }: {
     return () => window.removeEventListener("keydown", h);
   }, [open, onClose]);
   if (!open) return null;
-  return (
+  // Portal to <body>: ancestors with transforms/filters (e.g. the blurred sticky header) would otherwise
+  // become the containing block for this fixed overlay and clip it.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto whitespace-normal bg-slate-900/40 p-4 pt-[10vh]" onMouseDown={onClose}>
       <div
         role="dialog"
@@ -125,7 +128,8 @@ export function Modal({ open, onClose, title, children, footer, wide }: {
         <div className="space-y-4 px-5 py-4 text-sm">{children}</div>
         {footer && <div className="flex justify-end gap-2 border-t border-slate-100 px-5 py-3">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

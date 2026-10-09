@@ -132,7 +132,9 @@ is up to date). Regenerate with:
 cd backend && PYTHONPATH=src uv run python -m fleethub.seed.generate
 ```
 
-Admins can reset the demo from the **Simulator** page.
+Anyone can reset the demo with **Reset** in the header (next to the simulation clock controls) or
+from the **Simulator** page. The demo world is shared, so a reset affects everyone using the
+environment.
 
 ## Deployment (GitHub Actions → Cloudflare Workers)
 

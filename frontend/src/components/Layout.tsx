@@ -10,6 +10,7 @@ import { fmtTime } from "../lib/format";
 import type { Me, Meta } from "../lib/types";
 import { useTour } from "../demo/tour";
 import { useMe } from "./domain";
+import { ResetDemoButton } from "./ResetDemo";
 import { cx } from "./ui";
 
 const NAV = [
@@ -169,6 +170,7 @@ function SimClock() {
       <button className={btn} title="Poll deployer, sync inventory and scanner now" disabled={sync.isPending} onClick={() => sync.mutate({ path: "/sim/sync" })}>
         <RefreshCw className={cx("size-3", sync.isPending && "animate-spin")} /> Sync
       </button>
+      <ResetDemoButton compact />
     </div>
   );
 }
